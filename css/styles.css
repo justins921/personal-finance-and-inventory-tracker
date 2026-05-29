@@ -270,6 +270,7 @@ h4 { font-size: 0.92rem; margin: 0; }
   padding: 20px 22px;
   box-shadow: var(--shadow-sm);
   margin-top: 18px;
+  min-width: 0; /* allow shrinking inside grids so charts/tables don't overflow */
 }
 .card__head-row {
   display: flex;
@@ -287,6 +288,7 @@ h4 { font-size: 0.92rem; margin: 0; }
   grid-template-columns: 1fr 1fr;
   gap: 18px;
 }
+.two-col > * { min-width: 0; }
 .two-col .card { margin-top: 18px; }
 
 .pill {
@@ -304,9 +306,12 @@ h4 { font-size: 0.92rem; margin: 0; }
 .pill--warn { background: var(--warn-soft); color: var(--warn); }
 
 /* ---- chart wraps --------------------------------------------------------*/
-.chart-wrap { position: relative; height: 260px; }
+.chart-wrap { position: relative; height: 260px; width: 100%; min-width: 0; }
 .chart-wrap--donut { height: 240px; }
 .dash-chart { margin-top: 22px; }
+/* Canvas must never exceed its container (e.g. if Chart.js fails to load,
+   a bare <canvas> would otherwise keep its 300px intrinsic width). */
+canvas { max-width: 100%; display: block; }
 
 /* ---- alerts -------------------------------------------------------------*/
 .alerts { display: flex; flex-direction: column; gap: 9px; }
@@ -351,6 +356,7 @@ h4 { font-size: 0.92rem; margin: 0; }
   gap: 18px;
   align-items: start;
 }
+.pfs-col { min-width: 0; }
 .pfs-col__title {
   font-size: 1rem;
   padding: 6px 4px 10px;
@@ -688,3 +694,24 @@ body.auth-locked { overflow: hidden; }
   .pfs-summary { gap: 10px; }
   .pfs-summary__op { display: none; }
 }
+
+/* Small phones: collapse the two-column loan grid and tighten spacing. */
+@media (max-width: 560px) {
+  .kv { grid-template-columns: 1fr; gap: 9px; }
+  .head-actions { flex-wrap: wrap; }
+  .card__head-row { align-items: flex-start; }
+}
+
+@media (max-width: 380px) {
+  .view { padding: 18px 12px 56px; }
+  .card { padding: 16px 15px; }
+  .hero-net-worth { padding: 22px 18px; }
+  .hero-net-worth__value { font-size: 1.85rem; }
+  .stat__value { font-size: 1.28rem; }
+}
+
+/* Final safety net: never allow horizontal scrolling of the page itself.
+   Wide content (data tables, projected-vs-actual) scrolls inside its own
+   .table-wrap container instead. */
+html, body { overflow-x: hidden; }
+.main { overflow-x: hidden; }
