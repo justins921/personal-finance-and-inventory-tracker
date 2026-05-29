@@ -91,6 +91,27 @@ deploy from your branch's root. Your tracker will be live at
 > Charts use [Chart.js](https://www.chartjs.org/) via CDN. The app still works
 > fully offline; only the charts need a connection to render.
 
+### Deploy live (free)
+
+It's a static site, so any static host works. **Vercel** is the simplest:
+
+1. Push this repo to GitHub.
+2. Go to [vercel.com](https://vercel.com) → **Add New… → Project** → import the repo.
+3. Framework preset: **Other**. Leave **Build Command** empty and **Output
+   Directory** as `.` (the included [`vercel.json`](vercel.json) already sets
+   this — no build step). Click **Deploy**.
+4. You'll get a live `https://your-app.vercel.app` URL. Done.
+
+> **Railway** also works but is meant for apps that run a server process; for a
+> static site like this, Vercel / Netlify / Cloudflare Pages / GitHub Pages are
+> the natural (and free) fit.
+
+**If you enabled cloud sync (Supabase):** after deploying, add your live URL in
+Supabase under **Authentication → URL Configuration** (Site URL + redirect
+URLs) so login and email-confirmation links work on the deployed domain. Your
+Supabase keys live in `js/config.js` and deploy with the site — the anon key is
+public-safe (see the note above).
+
 ## 🧭 First run
 
 On first load you'll be offered a **sample portfolio** so you can explore. Wipe
