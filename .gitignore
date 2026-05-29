@@ -1,0 +1,13 @@
+# Dependencies (none required at runtime; only used for local testing)
+node_modules/
+package-lock.json
+
+# OS / editor cruft
+.DS_Store
+Thumbs.db
+*.swp
+.vscode/
+.idea/
+
+# Local backups exported from the app
+financial-tracker-backup-*.json

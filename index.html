@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="A free personal financial statement and real estate portfolio command center. Track net worth, equity, debt, cash flow, and ROE with automatic loan amortization. Your data stays in your browser." />
+  <title>Financial Command Center · Net Worth & Real Estate Tracker</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📊</text></svg>" />
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+  <div class="app">
+    <!-- Sidebar navigation -->
+    <aside class="sidebar" id="sidebar">
+      <div class="brand">
+        <span class="brand__mark">◆</span>
+        <span class="brand__text">Command<br/>Center</span>
+      </div>
+      <nav class="nav">
+        <a class="nav-link" data-view="dashboard" href="#/dashboard"><span class="nav-ico">🏠</span> Dashboard</a>
+        <a class="nav-link" data-view="statement" href="#/statement"><span class="nav-ico">📋</span> Financial Statement</a>
+        <a class="nav-link" data-view="portfolio" href="#/portfolio"><span class="nav-ico">🏘️</span> Real Estate</a>
+        <a class="nav-link" data-view="trends" href="#/trends"><span class="nav-ico">📈</span> Net Worth Trends</a>
+        <a class="nav-link" data-view="settings" href="#/settings"><span class="nav-ico">⚙️</span> Settings & Data</a>
+      </nav>
+      <div class="sidebar__foot">
+        <p>Free &amp; private.<br/>Your data never leaves your device.</p>
+      </div>
+    </aside>
+
+    <!-- Main content -->
+    <div class="main">
+      <header class="topbar">
+        <button class="icon-btn" id="navToggle" aria-label="Toggle menu">☰</button>
+        <span class="topbar__title">Financial Command Center</span>
+      </header>
+      <main class="view" id="view"><!-- views render here --></main>
+    </div>
+  </div>
+
+  <!-- Chart.js (optional; app works without it, charts just won't render) -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" defer></script>
+
+  <!-- App scripts (plain scripts so it also works by opening the file directly) -->
+  <script src="js/util.js"></script>
+  <script src="js/finance.js"></script>
+  <script src="js/charts.js"></script>
+  <script src="js/store.js"></script>
+  <script src="js/demo.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/views/dashboard.js"></script>
+  <script src="js/views/statement.js"></script>
+  <script src="js/views/portfolio.js"></script>
+  <script src="js/views/property.js"></script>
+  <script src="js/views/trends.js"></script>
+  <script src="js/views/settings.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
