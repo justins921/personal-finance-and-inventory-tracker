@@ -34,16 +34,47 @@ rebuilding amortization schedules or personal financial statements by hand.
 - **Net worth tracking over time** — capture dated snapshots and watch net
   worth, assets, liabilities, equity, and cash flow trend across the years.
 
-## 🔒 Your data, your device
+## 🔒 Accounts, sync & your data
 
-There is **no account and no server**. Everything you enter is stored locally
-in your browser (`localStorage`), so it's there when you come back.
+The app runs in one of two modes depending on whether a backend is configured:
 
-**To update your numbers:** just open the app and edit them — every value is
-editable inline and saves automatically.
+- **Local mode (default, zero setup):** no account, no server — everything is
+  stored in your browser (`localStorage`). Great for trying it instantly or
+  running fully private/offline.
+- **Cloud mode (logins + cross-device sync):** sign in with email + password
+  and your data syncs to a database, so it follows you to any device. Powered
+  by [Supabase](https://supabase.com) (free tier).
 
-**To back up or move to another device:** go to **Settings → Export** to
-download a `.json` backup, and **Import** it anywhere. You own your data.
+In both modes every value is **editable inline and saves automatically**, and
+you can always **Settings → Export / Import** a `.json` backup. You own your data.
+
+### Enabling logins & cross-device sync (≈5 minutes)
+
+1. Create a free project at [supabase.com](https://supabase.com).
+2. In the project's **SQL Editor**, paste and run
+   [`supabase-setup.sql`](supabase-setup.sql). This creates a per-user table
+   locked down with Row Level Security (each account can only touch its own data).
+3. In **Project Settings → API**, copy the **Project URL** and the
+   **anon / public** key.
+4. Paste both into [`js/config.js`](js/config.js):
+   ```js
+   window.APP_CONFIG = {
+     SUPABASE_URL: "https://YOUR-PROJECT.supabase.co",
+     SUPABASE_ANON_KEY: "YOUR-ANON-PUBLIC-KEY",
+     REQUIRE_LOGIN: false, // set true to require sign-in
+   };
+   ```
+5. (Optional) For instant logins, turn **off** "Confirm email" under
+   **Authentication → Providers → Email**. Leave it on to verify addresses.
+
+That's it — deploy and your users can sign up and sync.
+
+> **Is it safe to commit the anon key?** Yes. The anon/public key is *designed*
+> to ship in client code; access is enforced server-side by Row Level Security
+> (set up by the SQL above), so one account can never read another's data.
+
+> Users who used the app in local mode before signing up have their existing
+> local data automatically adopted into their new account on first login.
 
 ## 🚀 Use it
 
@@ -69,15 +100,19 @@ it anytime in **Settings → Erase all my data** and start entering your own.
 
 ```
 index.html            # app shell + nav
+supabase-setup.sql    # one-time DB + Row Level Security setup for cloud sync
 css/styles.css        # styling
 js/
+  config.js           # deployment config (Supabase URL/key, or blank = local)
   util.js             # formatting, dates, DOM helpers
   finance.js          # calculation engine (amortization, ROE, CoC, net worth)
   charts.js           # Chart.js wrapper (degrades gracefully)
-  store.js            # state + localStorage persistence + import/export
+  store.js            # state + namespaced localStorage cache + remote-save hook
   demo.js             # sample portfolio
   ui.js               # reusable cards, modal forms, toasts
-  app.js              # hash router + bootstrap
+  auth.js             # Supabase email/password auth + login screen
+  cloud.js            # cloud sync (pull on login, debounced push on change)
+  app.js              # hash router + auth/sync bootstrap
   views/              # dashboard, statement, portfolio, property, trends, settings
 ```
 
@@ -97,7 +132,7 @@ js/
 
 Refinance calculator · Sell-vs-hold · 1031 exchange analysis · retirement &
 financial-freedom forecasting · market benchmarking · AI portfolio analysis ·
-optional cloud sync for multi-device access.
+real-time multi-device sync (Supabase Realtime) · social / Google login.
 
 ## 📄 License
 

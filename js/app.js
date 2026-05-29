@@ -76,13 +76,13 @@
 
   App.router = router;
 
-  function init() {
-    App.store.load();
+  /* ---- shared chrome ----------------------------------------------------*/
 
-    // Render once on load and on every hash change.
+  let chromeWired = false;
+  function wireChrome() {
+    if (chromeWired) return;
+    chromeWired = true;
     window.addEventListener("hashchange", () => router.render());
-
-    // Mobile nav toggle
     const toggle = util.$("#navToggle");
     const sidebar = util.$("#sidebar");
     if (toggle && sidebar) {
@@ -91,22 +91,139 @@
         a.addEventListener("click", () => sidebar.classList.remove("open"))
       );
     }
+  }
 
+  function maybeWelcome() {
+    if (!App.store.isEmpty()) return;
+    if (localStorage.getItem("pfs-re-tracker:seen-welcome")) return;
+    localStorage.setItem("pfs-re-tracker:seen-welcome", "1");
+    setTimeout(() => {
+      if (confirm("Welcome! Load a sample portfolio to explore how everything works? (You can erase it anytime in Settings.)")) {
+        App.store.loadDemo();
+        router.refresh();
+      }
+    }, 400);
+  }
+
+  /** Render the app shell + current view (used after login or in local mode). */
+  function startApp() {
+    document.body.classList.remove("auth-locked");
+    wireChrome();
     router.render();
+    updateAccountChrome();
+  }
 
-    // First-time hint: offer the sample portfolio.
-    const empty =
-      !App.store.data.properties.length &&
-      !App.store.data.accounts.checking.length &&
-      !App.store.data.netWorthSnapshots.length;
-    if (empty && !localStorage.getItem("pfs-re-tracker:seen-welcome")) {
-      localStorage.setItem("pfs-re-tracker:seen-welcome", "1");
-      setTimeout(() => {
-        if (confirm("Welcome! Load a sample portfolio to explore how everything works? (You can erase it anytime in Settings.)")) {
-          App.store.loadDemo();
-          router.refresh();
+  /** Reflect login + sync status in the sidebar footer. */
+  function updateAccountChrome(syncStatus) {
+    const foot = util.$("#sidebarAccount");
+    if (!foot) return;
+    const user = App.auth && App.auth.user && App.auth.user();
+    const configured = App.config.isConfigured();
+    if (configured && user) {
+      const dot = syncStatus || (App.cloud ? App.cloud.getStatus() : "synced");
+      foot.innerHTML = `
+        <div class="acct">
+          <div class="acct__sync acct__sync--${dot}" title="Sync: ${dot}"></div>
+          <div class="acct__email" title="${util.esc(user.email || "")}">${util.esc(user.email || "Signed in")}</div>
+          <button class="acct__out" id="signOutBtn" title="Sign out">Sign out</button>
+        </div>`;
+      const out = util.$("#signOutBtn", foot);
+      if (out) out.addEventListener("click", () => App.auth.signOut());
+    } else if (configured) {
+      foot.innerHTML = `<button class="acct__signin" id="signInBtn">Sign in to sync</button>`;
+      const inb = util.$("#signInBtn", foot);
+      if (inb) inb.addEventListener("click", () => location.reload());
+    } else {
+      foot.innerHTML = `<p>Free &amp; private.<br/>Your data never leaves your device.</p>`;
+    }
+  }
+  App.updateAccountChrome = updateAccountChrome;
+
+  /* ---- auth + cloud orchestration --------------------------------------*/
+
+  async function enterApp(user) {
+    App.auth.removeGate();
+    App.cloud.setUser(user.id);
+    App.store.setNamespace("u:" + user.id); // loads this user's local cache
+
+    // Pull authoritative data from the cloud.
+    const cloudData = await App.cloud.pull();
+
+    if (cloudData && !App.store.isEmpty(cloudData)) {
+      // Cloud is the source of truth.
+      App.store.replaceData(cloudData);
+    } else {
+      // No cloud data yet — seed it from whatever local data we have.
+      let seed = null;
+      if (!App.store.isEmpty()) {
+        seed = App.store.data; // this user's device cache
+      } else {
+        // Adopt pre-login local-mode data, if any (first-time signup flow).
+        const localData = App.store.readNamespace("local");
+        if (localData && !App.store.isEmpty(localData)) {
+          App.store.replaceData(localData);
+          seed = localData;
         }
-      }, 400);
+      }
+      if (seed) await App.cloud.pushNow(seed);
+    }
+
+    startApp();
+    maybeWelcome();
+  }
+
+  function showLogin() {
+    document.body.classList.add("auth-locked");
+    App.auth.renderGate(() => {
+      // "Use on this device only" — fall back to local mode.
+      App.store.setNamespace("local");
+      App.auth.removeGate();
+      startApp();
+      maybeWelcome();
+    });
+  }
+
+  function handleAuthChange(user) {
+    if (user) {
+      enterApp(user);
+    } else {
+      // Signed out: drop to login gate, keep nothing in view.
+      App.store.setNamespace("local");
+      showLogin();
+    }
+  }
+
+  /* ---- bootstrap --------------------------------------------------------*/
+
+  async function init() {
+    const configured = App.config.isConfigured();
+
+    if (!configured) {
+      // Local-only mode (no backend configured).
+      App.store.setNamespace("local");
+      startApp();
+      maybeWelcome();
+      return;
+    }
+
+    // Cloud mode: set up Supabase, auth, and sync.
+    const client = window.supabase.createClient(App.config.url, App.config.anonKey);
+    App.sb = client;
+    App.auth.init(client);
+    App.cloud.init(client);
+    App.store.setRemoteSaver((data) => App.cloud.pushDebounced(data));
+    App.cloud.onStatus((s) => updateAccountChrome(s));
+    App.auth.onChange(handleAuthChange);
+    App.auth.listen();
+
+    try {
+      const user = await App.auth.getSession();
+      if (user) await enterApp(user);
+      else showLogin();
+    } catch (e) {
+      console.error("Auth init failed; falling back to local mode:", e);
+      App.store.setNamespace("local");
+      startApp();
     }
   }
 

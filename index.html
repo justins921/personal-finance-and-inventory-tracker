@@ -23,7 +23,7 @@
         <a class="nav-link" data-view="trends" href="#/trends"><span class="nav-ico">📈</span> Net Worth Trends</a>
         <a class="nav-link" data-view="settings" href="#/settings"><span class="nav-ico">⚙️</span> Settings & Data</a>
       </nav>
-      <div class="sidebar__foot">
+      <div class="sidebar__foot" id="sidebarAccount">
         <p>Free &amp; private.<br/>Your data never leaves your device.</p>
       </div>
     </aside>
@@ -40,6 +40,11 @@
 
   <!-- Chart.js (optional; app works without it, charts just won't render) -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" defer></script>
+  <!-- Supabase JS (optional; enables accounts + cross-device sync when configured) -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js" defer></script>
+
+  <!-- Deployment config (Supabase URL + anon key, or blank for local-only) -->
+  <script src="js/config.js"></script>
 
   <!-- App scripts (plain scripts so it also works by opening the file directly) -->
   <script src="js/util.js"></script>
@@ -48,6 +53,8 @@
   <script src="js/store.js"></script>
   <script src="js/demo.js"></script>
   <script src="js/ui.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/cloud.js"></script>
   <script src="js/views/dashboard.js"></script>
   <script src="js/views/statement.js"></script>
   <script src="js/views/portfolio.js"></script>

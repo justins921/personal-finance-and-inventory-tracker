@@ -11,8 +11,16 @@
   const App = (window.App = window.App || {});
   const uid = App.util.uid;
 
-  const STORAGE_KEY = "pfs-re-tracker:v1";
+  const STORAGE_BASE = "pfs-re-tracker:v1";
   const SCHEMA_VERSION = 1;
+
+  // Storage is namespaced so multiple accounts on the same browser never see
+  // each other's cached data. "local" is the no-login namespace; once a user
+  // signs in we switch to "u:<userId>".
+  let namespace = "local";
+  function storageKey() {
+    return STORAGE_BASE + ":" + namespace;
+  }
 
   /** A fresh, empty data object. */
   function emptyData() {
@@ -67,14 +75,48 @@
   }
 
   const listeners = [];
+  let remoteSaver = null; // optional cloud persister, registered by cloud.js
 
   const store = {
     data: emptyData(),
 
-    /* ---- persistence ----------------------------------------------------*/
+    /* ---- namespace / persistence ---------------------------------------*/
+
+    /**
+     * Switch the active storage namespace (e.g. on login/logout) and reload
+     * the cached data for that namespace into memory.
+     */
+    setNamespace(ns) {
+      namespace = ns || "local";
+      store.load();
+    },
+
+    getNamespace() {
+      return namespace;
+    },
+
+    /** Read (without switching to) the cached data for another namespace. */
+    readNamespace(ns) {
+      try {
+        const raw = localStorage.getItem(STORAGE_BASE + ":" + ns);
+        return raw ? normalize(JSON.parse(raw)) : null;
+      } catch (e) {
+        return null;
+      }
+    },
+
+    /** Permanently clear a namespace's local cache. */
+    clearNamespace(ns) {
+      try {
+        localStorage.removeItem(STORAGE_BASE + ":" + ns);
+      } catch (e) {
+        /* ignore */
+      }
+    },
+
     load() {
       try {
-        const raw = localStorage.getItem(STORAGE_KEY);
+        const raw = localStorage.getItem(storageKey());
         if (raw) {
           store.data = normalize(JSON.parse(raw));
           return true;
@@ -86,9 +128,10 @@
       return false;
     },
 
+    /** Write the in-memory data to the local cache only. */
     save() {
       try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(store.data));
+        localStorage.setItem(storageKey(), JSON.stringify(store.data));
       } catch (e) {
         console.error("Failed to save data:", e);
         alert(
@@ -98,9 +141,39 @@
       }
     },
 
-    /** Persist + notify listeners. Call after any mutation. */
+    /**
+     * Replace the entire data object (e.g. with data pulled from the cloud).
+     * By default this does NOT push back to the remote, preventing sync loops.
+     */
+    replaceData(data, opts) {
+      opts = opts || {};
+      store.data = normalize(data);
+      store.save();
+      listeners.forEach((fn) => {
+        try {
+          fn(store.data);
+        } catch (e) {
+          console.error(e);
+        }
+      });
+      if (opts.pushRemote && remoteSaver) remoteSaver(store.data);
+    },
+
+    /** Register a cloud persister: fn(data) called (debounced) on each commit. */
+    setRemoteSaver(fn) {
+      remoteSaver = fn;
+    },
+
+    /** Persist (local + remote) and notify listeners. Call after any mutation. */
     commit() {
       store.save();
+      if (remoteSaver) {
+        try {
+          remoteSaver(store.data);
+        } catch (e) {
+          console.error("Remote save failed:", e);
+        }
+      }
       listeners.forEach((fn) => {
         try {
           fn(store.data);
@@ -112,6 +185,22 @@
 
     onChange(fn) {
       listeners.push(fn);
+    },
+
+    /** True when the data object has no user-entered content worth syncing. */
+    isEmpty(d) {
+      d = d || store.data;
+      const a = d.accounts || {};
+      const accountsEmpty = ["cash", "checking", "savings", "stocks", "retirement", "other"].every(
+        (k) => !(a[k] && a[k].length)
+      );
+      return (
+        accountsEmpty &&
+        !(d.properties && d.properties.length) &&
+        !(d.vehicles && d.vehicles.length) &&
+        !(d.businesses && d.businesses.length) &&
+        !(d.netWorthSnapshots && d.netWorthSnapshots.length)
+      );
     },
 
     /* ---- generic collection helpers ------------------------------------*/

@@ -13,15 +13,21 @@
   V.settings = {
     render(root) {
       const profile = App.store.data.profile || {};
-      const lastSaved = "Saved automatically to this browser";
+      const cloudOn = App.config && App.config.isConfigured();
+      const user = cloudOn && App.auth.user ? App.auth.user() : null;
+      const lastSaved = user
+        ? "Synced to your account and cached in this browser"
+        : "Saved automatically to this browser";
 
       root.innerHTML = `
         <div class="view-head">
           <div>
             <h1>Settings & Data</h1>
-            <p class="muted">Your data stays on this device. Back it up or move it anytime.</p>
+            <p class="muted">${user ? "Your data syncs to your account across devices." : "Your data stays on this device. Back it up or move it anytime."}</p>
           </div>
         </div>
+
+        ${this.accountCard(cloudOn, user)}
 
         <div class="card">
           <h3>Profile</h3>
@@ -37,8 +43,9 @@
         <div class="card">
           <h3>Backup & Restore</h3>
           <p class="muted">
-            Everything you enter is stored locally in this browser (no account, no server).
-            Export a backup file to keep your data safe or to load it on another device or browser.
+            ${user
+              ? "Your data syncs to your account, but you can still export a portable copy at any time — handy for archives or sharing with an advisor."
+              : "Everything you enter is stored locally in this browser. Export a backup file to keep your data safe or to load it on another device or browser."}
           </p>
           <div class="btn-row">
             <button class="btn btn--primary" id="exportBtn">⬇ Export backup (.json)</button>
@@ -106,13 +113,53 @@
       });
 
       App.util.$("#resetBtn", root).addEventListener("click", () => {
-        if (confirm("Erase ALL your data from this browser? This cannot be undone. Export a backup first if unsure.")) {
+        const where = App.auth && App.auth.user && App.auth.user()
+          ? "from your account (all devices)"
+          : "from this browser";
+        if (confirm("Erase ALL your data " + where + "? This cannot be undone. Export a backup first if unsure.")) {
           App.store.reset();
           ui.toast("All data erased.");
           location.hash = "#/dashboard";
           App.router.refresh();
         }
       });
+
+      const signOut = App.util.$("#settingsSignOut", root);
+      if (signOut) signOut.addEventListener("click", () => App.auth.signOut());
+    },
+
+    accountCard(cloudOn, user) {
+      if (!cloudOn) {
+        return `
+          <div class="card">
+            <h3>Account & Sync</h3>
+            <p class="muted">Cloud sync isn't set up on this copy of the app, so your data is stored
+            locally in this browser only. The site owner can enable free accounts and cross-device
+            sync by configuring Supabase (see the project README).</p>
+          </div>`;
+      }
+      if (user) {
+        const status = App.cloud ? App.cloud.getStatus() : "synced";
+        const label = { synced: "All changes synced", saving: "Saving…", loading: "Loading…", error: "Sync error — changes saved locally", offline: "Offline" }[status] || status;
+        return `
+          <div class="card">
+            <h3>Account & Sync</h3>
+            <div class="acct-row">
+              <div>
+                <div class="acct-row__email">${esc(user.email || "Signed in")}</div>
+                <div class="acct-row__status acct-row__status--${status}">${esc(label)}</div>
+              </div>
+              <button class="btn btn--ghost" id="settingsSignOut">Sign out</button>
+            </div>
+            <p class="hint">Your data is saved to your account and follows you to any device you sign in on.</p>
+          </div>`;
+      }
+      return `
+        <div class="card">
+          <h3>Account & Sync</h3>
+          <p class="muted">You're using the app on this device only. Sign in to sync your data across devices.</p>
+          <button class="btn btn--primary" onclick="location.reload()">Sign in</button>
+        </div>`;
     },
 
     exportData() {

@@ -558,6 +558,94 @@ body.modal-open { overflow: hidden; }
 .toast--ok { background: var(--brand); }
 .toast--warn { background: var(--warn); }
 
+/* ---- auth gate ----------------------------------------------------------*/
+body.auth-locked { overflow: hidden; }
+.auth-gate {
+  position: fixed;
+  inset: 0;
+  z-index: 150;
+  background: linear-gradient(150deg, #11241c 0%, #1f6f54 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  gap: 18px;
+}
+.auth-card {
+  background: var(--surface);
+  border-radius: 18px;
+  padding: 34px 32px 28px;
+  width: min(420px, 100%);
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.35);
+}
+.auth-brand { display: flex; align-items: center; gap: 8px; font-weight: 700; color: var(--brand); margin-bottom: 18px; }
+.auth-brand__mark { font-size: 1.2rem; color: var(--brand-2); }
+.auth-card h1 { font-size: 1.5rem; margin: 0 0 4px; }
+.auth-sub { color: var(--muted); margin: 0 0 18px; font-size: 0.92rem; }
+.auth-form { display: flex; flex-direction: column; gap: 6px; }
+.auth-form label { font-size: 0.8rem; font-weight: 600; color: var(--text-2); margin-top: 6px; }
+.auth-form input {
+  font: inherit;
+  font-size: 0.95rem;
+  padding: 11px 13px;
+  border: 1px solid var(--border-strong);
+  border-radius: 9px;
+  width: 100%;
+}
+.auth-form input:focus { outline: none; border-color: var(--brand-2); box-shadow: 0 0 0 3px var(--brand-soft); }
+.auth-submit { margin-top: 16px; width: 100%; padding: 12px; font-size: 0.95rem; }
+.auth-toggle { text-align: center; font-size: 0.88rem; color: var(--text-2); margin: 16px 0 0; }
+.auth-toggle a { font-weight: 600; }
+.auth-msg { padding: 10px 13px; border-radius: 9px; font-size: 0.88rem; margin-bottom: 14px; }
+.auth-msg--error { background: var(--neg-soft); color: var(--neg); }
+.auth-msg--ok { background: var(--pos-soft); color: var(--pos); }
+.auth-msg--info { background: var(--surface-2); color: var(--text-2); }
+.auth-or { display: flex; align-items: center; gap: 12px; margin: 18px 0 14px; color: var(--muted); font-size: 0.8rem; }
+.auth-or::before, .auth-or::after { content: ""; flex: 1; height: 1px; background: var(--border); }
+.auth-skip { width: 100%; }
+.auth-fineprint { font-size: 0.76rem; color: var(--muted); text-align: center; margin: 10px 0 0; }
+.auth-footer { color: rgba(255, 255, 255, 0.8); font-size: 0.82rem; }
+
+/* ---- sidebar account + sync badge --------------------------------------*/
+.acct { display: flex; align-items: center; gap: 9px; }
+.acct__sync { width: 9px; height: 9px; border-radius: 50%; flex: none; background: #7d9488; }
+.acct__sync--synced { background: var(--brand-2); }
+.acct__sync--saving { background: #e0a93c; animation: pulse 1s infinite; }
+.acct__sync--loading { background: #e0a93c; animation: pulse 1s infinite; }
+.acct__sync--error { background: var(--neg); }
+.acct__sync--offline { background: #7d9488; }
+@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
+.acct__email {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.8rem;
+  color: #cfe3d8;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.acct__out, .acct__signin {
+  background: none;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #cfe3d8;
+  font: inherit;
+  font-size: 0.74rem;
+  padding: 4px 9px;
+  border-radius: 7px;
+  cursor: pointer;
+}
+.acct__out:hover, .acct__signin:hover { background: rgba(255, 255, 255, 0.1); color: #fff; }
+.acct__signin { width: 100%; padding: 8px; font-size: 0.84rem; }
+
+/* settings account row */
+.acct-row { display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap; }
+.acct-row__email { font-weight: 600; }
+.acct-row__status { font-size: 0.82rem; color: var(--muted); margin-top: 2px; }
+.acct-row__status--synced { color: var(--pos); }
+.acct-row__status--saving, .acct-row__status--loading { color: var(--warn); }
+.acct-row__status--error { color: var(--neg); }
+
 /* ---- responsive ---------------------------------------------------------*/
 @media (max-width: 900px) {
   .pfs-columns { grid-template-columns: 1fr; }
