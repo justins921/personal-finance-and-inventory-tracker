@@ -34,7 +34,8 @@
           <div class="grid-form">
             <div class="field">
               <label for="profName">Your Name</label>
-              <input id="profName" type="text" value="${esc(profile.name || "")}" placeholder="e.g. Alex Investor">
+              <input id="profName" type="text" value="${esc(profile.name || "")}" placeholder="e.g. Alex Investor" autocomplete="name">
+              <small class="hint">Shown on your dashboard. Saves automatically.</small>
             </div>
           </div>
           <button class="btn btn--primary" id="saveProfile">Save profile</button>
@@ -75,9 +76,28 @@
         </div>
       `;
 
+      const nameInput = App.util.$("#profName", root);
+      // Persist the name; returns true if it actually changed.
+      const persistName = () => {
+        if (!App.store.data.profile) App.store.data.profile = {};
+        const value = nameInput.value.trim();
+        if (value === (App.store.data.profile.name || "")) return false;
+        App.store.data.profile.name = value;
+        App.store.commit(); // saves locally + syncs to cloud if signed in
+        return true;
+      };
+
+      // Auto-save on blur / Enter (consistent with the rest of the app).
+      nameInput.addEventListener("change", () => {
+        if (persistName()) ui.toast("Name saved.", "ok");
+      });
+      nameInput.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") nameInput.blur();
+      });
+
+      // Explicit button still works and always confirms.
       App.util.$("#saveProfile", root).addEventListener("click", () => {
-        App.store.data.profile.name = App.util.$("#profName", root).value.trim();
-        App.store.commit();
+        persistName();
         ui.toast("Profile saved.", "ok");
       });
 
