@@ -103,8 +103,13 @@
         fileInput.value = "";
       });
 
-      App.util.$("#demoBtn", root).addEventListener("click", () => {
-        if (confirm("Load the sample portfolio? This replaces your current data. Export a backup first if you want to keep it.")) {
+      App.util.$("#demoBtn", root).addEventListener("click", async () => {
+        const yes = await ui.confirm({
+          title: "Load sample portfolio?",
+          message: "This replaces your current data. Export a backup first if you want to keep it.",
+          confirmLabel: "Load sample",
+        });
+        if (yes) {
           App.store.loadDemo();
           ui.toast("Sample portfolio loaded.", "ok");
           location.hash = "#/dashboard";
@@ -112,11 +117,17 @@
         }
       });
 
-      App.util.$("#resetBtn", root).addEventListener("click", () => {
+      App.util.$("#resetBtn", root).addEventListener("click", async () => {
         const where = App.auth && App.auth.user && App.auth.user()
-          ? "from your account (all devices)"
+          ? "from your account (and every device you're signed in on)"
           : "from this browser";
-        if (confirm("Erase ALL your data " + where + "? This cannot be undone. Export a backup first if unsure.")) {
+        const yes = await ui.confirm({
+          title: "Erase all your data?",
+          message: "This permanently deletes everything " + where + ". This cannot be undone — export a backup first if unsure.",
+          confirmLabel: "Erase everything",
+          danger: true,
+        });
+        if (yes) {
           App.store.reset();
           ui.toast("All data erased.");
           location.hash = "#/dashboard";

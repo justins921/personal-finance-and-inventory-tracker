@@ -98,10 +98,20 @@
     if (localStorage.getItem("pfs-re-tracker:seen-welcome")) return;
     localStorage.setItem("pfs-re-tracker:seen-welcome", "1");
     setTimeout(() => {
-      if (confirm("Welcome! Load a sample portfolio to explore how everything works? (You can erase it anytime in Settings.)")) {
-        App.store.loadDemo();
-        router.refresh();
-      }
+      App.ui
+        .confirm({
+          title: "Welcome! 👋",
+          message:
+            "Want to load a sample portfolio to explore how everything works? You can erase it anytime in Settings.",
+          confirmLabel: "Load sample",
+          cancelLabel: "Start empty",
+        })
+        .then((yes) => {
+          if (yes) {
+            App.store.loadDemo();
+            router.refresh();
+          }
+        });
     }, 400);
   }
 

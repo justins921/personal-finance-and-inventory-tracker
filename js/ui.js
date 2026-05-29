@@ -167,12 +167,18 @@
       cfg.onSubmit && cfg.onSubmit(values);
     }
 
-    overlay.addEventListener("click", (e) => {
+    overlay.addEventListener("click", async (e) => {
       if (e.target === overlay) closeModal();
       if (e.target.closest("[data-close]")) closeModal();
       if (e.target.closest("[data-submit]")) submit();
       if (e.target.closest("[data-delete]")) {
-        if (confirm("Delete this item? This cannot be undone.")) {
+        const yes = await confirmDialog({
+          title: "Delete this item?",
+          message: "This can't be undone.",
+          confirmLabel: "Delete",
+          danger: true,
+        });
+        if (yes) {
           closeModal();
           cfg.onDelete();
         }
@@ -194,16 +200,96 @@
     if (first) setTimeout(() => first.focus(), 30);
   }
 
+  /** Close the topmost modal/dialog; clear the body lock only when none remain. */
   function closeModal() {
-    const ex = util.$(".modal-overlay");
-    if (ex) ex.remove();
-    document.body.classList.remove("modal-open");
+    const all = util.$$(".modal-overlay");
+    if (!all.length) return;
+    all[all.length - 1].remove();
+    if (!util.$(".modal-overlay")) document.body.classList.remove("modal-open");
   }
 
-  // Esc closes modal
+  // Esc closes the topmost modal.
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape") closeModal();
   });
+
+  /* ---- styled confirm / alert dialogs -----------------------------------*
+   * Drop-in, on-brand replacements for window.confirm / window.alert.
+   * confirmDialog(opts) -> Promise<boolean>; alertDialog(opts) -> Promise<void>.
+   * They stack over an open form (e.g. delete confirmation) and clean up
+   * their own keyboard handlers.
+   * ----------------------------------------------------------------------*/
+
+  function buildDialog(opts, withCancel) {
+    const danger = !!opts.danger;
+    const overlay = util.el(`
+      <div class="modal-overlay" role="alertdialog" aria-modal="true">
+        <div class="modal modal--dialog ${danger ? "modal--danger" : ""}">
+          <div class="modal__body dialog-body">
+            <div class="dialog-icon ${danger ? "dialog-icon--danger" : "dialog-icon--info"}">${danger ? "⚠" : "ℹ"}</div>
+            <div class="dialog-text">
+              <h3>${esc(opts.title || (withCancel ? "Are you sure?" : "Notice"))}</h3>
+              ${opts.message ? `<p>${esc(opts.message)}</p>` : ""}
+            </div>
+          </div>
+          <div class="modal__foot">
+            <span></span>
+            <div class="modal__foot-right">
+              ${withCancel ? `<button type="button" class="btn btn--ghost" data-cancel>${esc(opts.cancelLabel || "Cancel")}</button>` : ""}
+              <button type="button" class="btn ${danger ? "btn--danger" : "btn--primary"}" data-ok>${esc(opts.confirmLabel || "OK")}</button>
+            </div>
+          </div>
+        </div>
+      </div>`);
+    return overlay;
+  }
+
+  function showDialog(opts, withCancel) {
+    return new Promise((resolve) => {
+      const overlay = buildDialog(opts, withCancel);
+      document.body.appendChild(overlay);
+      document.body.classList.add("modal-open");
+
+      let settled = false;
+      const finish = (val) => {
+        if (settled) return;
+        settled = true;
+        document.removeEventListener("keydown", onKey, true);
+        if (overlay.parentNode) overlay.remove();
+        if (!util.$(".modal-overlay")) document.body.classList.remove("modal-open");
+        resolve(val);
+      };
+
+      const onKey = (e) => {
+        if (e.key === "Escape") {
+          e.stopPropagation(); // don't let the global handler also fire
+          finish(withCancel ? false : undefined);
+        } else if (e.key === "Enter") {
+          e.preventDefault();
+          finish(withCancel ? true : undefined);
+        }
+      };
+      document.addEventListener("keydown", onKey, true);
+
+      overlay.addEventListener("click", (e) => {
+        if (e.target === overlay || e.target.closest("[data-cancel]")) finish(withCancel ? false : undefined);
+        else if (e.target.closest("[data-ok]")) finish(withCancel ? true : undefined);
+      });
+
+      setTimeout(() => {
+        const b = overlay.querySelector("[data-ok]");
+        if (b) b.focus();
+      }, 30);
+    });
+  }
+
+  function confirmDialog(opts) {
+    return showDialog(opts || {}, true);
+  }
+  function alertDialog(opts) {
+    if (typeof opts === "string") opts = { message: opts };
+    return showDialog(opts || {}, false);
+  }
 
   App.ui = {
     statCard,
@@ -213,5 +299,7 @@
     toast,
     openForm,
     closeModal,
+    confirm: confirmDialog,
+    alert: alertDialog,
   };
 })();

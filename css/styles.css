@@ -166,6 +166,8 @@ h4 { font-size: 0.92rem; margin: 0; }
 .btn--ghost:hover { background: var(--surface-2); }
 .btn--danger-ghost { background: transparent; border-color: var(--neg); color: var(--neg); }
 .btn--danger-ghost:hover { background: var(--neg-soft); }
+.btn--danger { background: var(--neg); color: #fff; }
+.btn--danger:hover { background: #a5301f; }
 .btn-row { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 6px; }
 
 .link-btn {
@@ -493,6 +495,23 @@ body.modal-open { overflow: hidden; }
 .modal__body { padding: 20px 22px; overflow-y: auto; }
 .modal__foot { display: flex; justify-content: space-between; align-items: center; padding: 14px 22px; border-top: 1px solid var(--border); background: var(--surface-2); }
 .modal__foot-right { display: flex; gap: 9px; margin-left: auto; }
+
+/* compact confirm / alert dialog (shares modal chrome) */
+.modal--dialog { width: min(440px, 100%); }
+.dialog-body { display: flex; gap: 15px; align-items: flex-start; padding: 24px 24px 6px; }
+.dialog-icon {
+  flex: none;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 1.2rem;
+}
+.dialog-icon--danger { background: var(--neg-soft); color: var(--neg); }
+.dialog-icon--info { background: var(--brand-soft); color: var(--brand); }
+.dialog-text h3 { margin: 4px 0 6px; }
+.dialog-text p { margin: 0; color: var(--text-2); font-size: 0.92rem; line-height: 1.5; }
 
 /* ---- forms --------------------------------------------------------------*/
 .grid-form { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 16px; }

@@ -134,10 +134,11 @@
         localStorage.setItem(storageKey(), JSON.stringify(store.data));
       } catch (e) {
         console.error("Failed to save data:", e);
-        alert(
+        const msg =
           "Could not save your data to this browser. Storage may be full or disabled. " +
-            "Use Settings → Export to back up your data."
-        );
+          "Use Settings → Export to back up your data.";
+        if (App.ui && App.ui.alert) App.ui.alert({ title: "Couldn't save", message: msg, danger: true });
+        else alert(msg);
       }
     },
 
