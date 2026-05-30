@@ -33,16 +33,13 @@
           rehabCosts: 18000,
           estimatedRent: 2850,
           monthlyExpenses: 950,
-          expectedCashFlow: 720,
           currentValue: 430000,
           loan: {
             originalBalance: 228000,
             interestRate: 4.25,
             termMonths: 360,
             startDate: "2019-06-01",
-            monthlyPayment: 0,
           },
-          projected: { rent: 2400, expenses: 850, cashFlow: 9000, cashOnCash: 12 },
           valueHistory: [
             { id: uid(), date: "2019-06-01", value: 285000, method: "purchase" },
             { id: uid(), date: "2022-01-01", value: 365000, method: "comparable" },
@@ -50,8 +47,8 @@
             { id: uid(), date: "2026-01-01", value: 430000, method: "manual" },
           ],
           actuals: [
-            { id: uid(), year: 2023, rent: 31200, expenses: 12100, cashFlow: 7800, cashOnCash: 10.4, source: "Stessa" },
-            { id: uid(), year: 2024, rent: 33600, expenses: 13400, cashFlow: 8400, cashOnCash: 11.2, source: "Tax return" },
+            { id: uid(), year: 2023, rent: 31200, expenses: 12100, source: "Stessa" },
+            { id: uid(), year: 2024, rent: 33600, expenses: 13400, source: "Tax return" },
           ],
         },
         {
@@ -64,23 +61,20 @@
           rehabCosts: 9000,
           estimatedRent: 3100,
           monthlyExpenses: 1100,
-          expectedCashFlow: 250,
           currentValue: 495000,
           loan: {
             originalBalance: 307500,
             interestRate: 3.1,
             termMonths: 360,
             startDate: "2021-09-15",
-            monthlyPayment: 0,
           },
-          projected: { rent: 2900, expenses: 1000, cashFlow: 6000, cashOnCash: 5.4 },
           valueHistory: [
             { id: uid(), date: "2021-09-15", value: 410000, method: "purchase" },
             { id: uid(), date: "2024-01-01", value: 470000, method: "comparable" },
             { id: uid(), date: "2026-01-01", value: 495000, method: "manual" },
           ],
           actuals: [
-            { id: uid(), year: 2024, rent: 36000, expenses: 14800, cashFlow: 2200, cashOnCash: 2.0, source: "QuickBooks" },
+            { id: uid(), year: 2024, rent: 36000, expenses: 14800, source: "QuickBooks" },
           ],
         },
         {
@@ -93,23 +87,20 @@
           rehabCosts: 45000,
           estimatedRent: 4200,
           monthlyExpenses: 1400,
-          expectedCashFlow: 1100,
           currentValue: 610000,
           loan: {
             originalBalance: 240000,
             interestRate: 4.75,
             termMonths: 300,
             startDate: "2017-03-01",
-            monthlyPayment: 0,
           },
-          projected: { rent: 3600, expenses: 1300, cashFlow: 13200, cashOnCash: 10.6 },
           valueHistory: [
             { id: uid(), date: "2017-03-01", value: 320000, method: "purchase" },
             { id: uid(), date: "2021-01-01", value: 480000, method: "comparable" },
             { id: uid(), date: "2026-01-01", value: 610000, method: "appraisal" },
           ],
           actuals: [
-            { id: uid(), year: 2024, rent: 49200, expenses: 17600, cashFlow: 13800, cashOnCash: 11.0, source: "Stessa" },
+            { id: uid(), year: 2024, rent: 49200, expenses: 17600, source: "Stessa" },
           ],
         },
       ],

@@ -463,6 +463,28 @@ canvas { max-width: 100%; display: block; }
 .progress { height: 9px; background: var(--border); border-radius: 20px; overflow: hidden; margin: 7px 0 5px; }
 .progress__bar { height: 100%; background: var(--brand-2); border-radius: 20px; }
 
+/* ---- cash flow breakdown -----------------------------------------------*/
+.cf { border: 1px solid var(--border); border-radius: var(--radius-sm); overflow: hidden; }
+.cf__row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  padding: 11px 15px;
+  border-bottom: 1px solid var(--border);
+}
+.cf__row:last-child { border-bottom: none; }
+.cf__row span { color: var(--text-2); }
+.cf__row b { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.cf__row b small { color: var(--muted); font-weight: 500; font-size: 0.72em; margin-left: 1px; }
+.cf__row--sub { background: var(--surface-2); }
+.cf__row--sub span, .cf__row--sub b { font-weight: 600; color: var(--text); }
+.cf__row--total { background: var(--brand-soft); }
+.cf__row--total span { color: var(--text); font-weight: 700; }
+.cf__row--total em { font-style: normal; color: var(--muted); font-weight: 500; }
+.cf__row--total b { font-size: 1.12rem; font-weight: 700; }
+.cf__foot { margin-top: 11px; }
+
 /* ---- empty state --------------------------------------------------------*/
 .empty {
   background: var(--surface);

@@ -139,13 +139,23 @@ js/
 
 ## 🛠️ How the math works
 
+The philosophy: enter the **minimum** inputs (rent, operating expenses, loan
+terms, cash invested, value) and everything else is **calculated** — nothing is
+hand-entered that the app can derive.
+
 - **Amortization** uses the standard remaining-balance formula. Months elapsed
-  are counted from the loan start date to today; payment is computed if you
-  don't supply one.
+  are counted from the loan start date to today; the monthly P&I payment is
+  computed from the loan amount, rate, and term.
+- **Monthly P&I (debt service)** = computed from the amortization
+- **NOI** (Net Operating Income) = (monthly rent − monthly operating expenses) × 12
+- **Annual Cash Flow** (net profit) = NOI − annual debt service (P&I)
 - **Equity** = estimated value − current loan balance
 - **LTV** = loan balance ÷ value
-- **Cash-on-Cash** = annual cash flow ÷ (down payment + rehab)
+- **Cash-on-Cash** = annual cash flow ÷ cash invested (down payment + rehab/closing)
 - **ROE** = annual cash flow ÷ current equity
+- **Expected vs Actual**: "Expected" is the pro-forma calculated from your
+  inputs; log a year's actual rent & expenses and the app computes that year's
+  actual cash flow / CoC / ROE the same way, then shows the variance.
 - **Net worth** = total assets − total liabilities (real estate value & mortgage
   balances flow in automatically from the portfolio)
 

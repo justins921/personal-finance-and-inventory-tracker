@@ -113,6 +113,11 @@
 
   /**
    * Derived figures for a single property as of `asOf`.
+   *
+   * Everything here is CALCULATED from a minimal set of inputs:
+   *   monthly rent, monthly operating expenses, loan terms, value, and cash
+   *   invested. Annual cash flow (net profit) = (rent − expenses) × 12 minus
+   *   annual mortgage debt service (P&I), which comes from the amortization.
    */
   function propertyMetrics(p, asOf) {
     p = p || {};
@@ -123,15 +128,17 @@
     const loanBalance = loan.currentBalance;
     const equity = value - loanBalance;
 
-    // Monthly cash flow: prefer an explicit figure, else rent minus payment
-    // minus monthly operating expenses.
-    let monthlyCashFlow;
-    if (p.expectedCashFlow !== undefined && p.expectedCashFlow !== null && p.expectedCashFlow !== "") {
-      monthlyCashFlow = num(p.expectedCashFlow);
-    } else {
-      monthlyCashFlow = num(p.estimatedRent) - loan.payment - num(p.monthlyExpenses);
-    }
-    const annualCashFlow = monthlyCashFlow * 12;
+    // Income & expenses (monthly inputs) → cash flow.
+    const monthlyRent = num(p.estimatedRent);
+    const monthlyExpenses = num(p.monthlyExpenses);
+    const monthlyNOI = monthlyRent - monthlyExpenses; // before debt service
+    const monthlyCashFlow = monthlyNOI - loan.payment;
+
+    const annualRent = monthlyRent * 12;
+    const annualExpenses = monthlyExpenses * 12;
+    const annualNOI = monthlyNOI * 12;
+    const annualDebtService = loan.payment * 12;
+    const annualCashFlow = monthlyCashFlow * 12; // net profit for the year
 
     const cashInvested = num(p.downPayment) + num(p.rehabCosts);
     const ltv = value > 0 ? (loanBalance / value) * 100 : 0;
@@ -147,7 +154,14 @@
       value,
       loanBalance,
       equity,
+      monthlyRent,
+      monthlyExpenses,
+      monthlyNOI,
       monthlyCashFlow,
+      annualRent,
+      annualExpenses,
+      annualNOI,
+      annualDebtService,
       annualCashFlow,
       cashInvested,
       ltv,
@@ -157,6 +171,23 @@
       appreciationPct,
       loan,
     };
+  }
+
+  /**
+   * Compute a single year's ACTUAL results from logged annual rent & expenses,
+   * using the same formulas as the expected pro-forma so they're comparable.
+   * Debt service and the denominators (cash invested, current equity) come
+   * from the property's current metrics.
+   */
+  function actualMetrics(p, actual, asOf) {
+    const m = propertyMetrics(p, asOf);
+    const annualRent = num(actual.rent);
+    const annualExpenses = num(actual.expenses);
+    const annualDebtService = m.annualDebtService;
+    const annualCashFlow = annualRent - annualExpenses - annualDebtService;
+    const cashOnCash = m.cashInvested > 0 ? (annualCashFlow / m.cashInvested) * 100 : 0;
+    const roe = m.equity > 0 ? (annualCashFlow / m.equity) * 100 : 0;
+    return { annualRent, annualExpenses, annualDebtService, annualCashFlow, cashOnCash, roe };
   }
 
   /* ---- Portfolio roll-up --------------------------------------------------*/
@@ -280,6 +311,7 @@
     balanceAfter,
     loanStatus,
     propertyMetrics,
+    actualMetrics,
     portfolioSummary,
     netWorth,
   };

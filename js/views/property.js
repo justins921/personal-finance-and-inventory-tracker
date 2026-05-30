@@ -44,6 +44,20 @@
           ${ui.statCard({ label: "Return on Equity", value: pct(m.roe) })}
         </div>
 
+        <div class="card">
+          <h3>Cash Flow Breakdown <span class="pill">auto</span></h3>
+          ${m.annualRent || m.annualExpenses || m.annualDebtService ? `
+          <div class="cf">
+            <div class="cf__row"><span>Gross Rent</span><b>${money(m.annualRent)}<small>/yr</small></b></div>
+            <div class="cf__row"><span>− Operating Expenses</span><b class="neg">${money(m.annualExpenses)}<small>/yr</small></b></div>
+            <div class="cf__row cf__row--sub"><span>= Net Operating Income (NOI)</span><b>${money(m.annualNOI)}<small>/yr</small></b></div>
+            <div class="cf__row"><span>− Mortgage Payments (P&I)</span><b class="neg">${money(m.annualDebtService)}<small>/yr</small></b></div>
+            <div class="cf__row cf__row--total"><span>= Annual Cash Flow <em>(net profit)</em></span><b class="${signClass(m.annualCashFlow)}">${money(m.annualCashFlow)}<small>/yr</small></b></div>
+          </div>
+          <p class="muted small cf__foot">≈ ${money(m.monthlyCashFlow)}/mo · Cash-on-cash ${pct(m.cashOnCash)} on ${money(m.cashInvested)} invested · Return on equity ${pct(m.roe)} on ${money(m.equity)} equity</p>
+          ` : `<p class="muted">Add monthly rent and operating expenses (via <a href="#" id="editIncomeLink">Edit</a>) to calculate cash flow, cash-on-cash, and ROE.</p>`}
+        </div>
+
         <div class="two-col">
           <div class="card">
             <h3>Loan & Amortization <span class="pill">auto</span></h3>
@@ -78,13 +92,10 @@
 
         <div class="card">
           <div class="card__head-row">
-            <h3>Projected vs Actual Returns</h3>
-            <div>
-              <button class="link-btn" id="editProjectedBtn">Edit projections</button>
-              <button class="link-btn" id="addActualBtn">+ Add actual year</button>
-            </div>
+            <h3>Expected vs Actual</h3>
+            <button class="link-btn" id="addActualBtn">+ Add actual year</button>
           </div>
-          ${this.projectedVsActual(p)}
+          ${this.expectedVsActual(p)}
         </div>
       `;
 
@@ -94,10 +105,11 @@
       const upd2 = App.util.$("#updateValueBtn2", root);
       if (upd2) upd2.addEventListener("click", upd);
       App.util.$("#editPropBtn", root).addEventListener("click", () => this.openEditForm(p));
-      App.util.$("#editProjectedBtn", root).addEventListener("click", () => this.openProjectedForm(p));
       App.util.$("#addActualBtn", root).addEventListener("click", () => this.openActualForm(p, null));
       const addLoan = App.util.$("#addLoanLink", root);
       if (addLoan) addLoan.addEventListener("click", (e) => { e.preventDefault(); this.openEditForm(p); });
+      const editIncome = App.util.$("#editIncomeLink", root);
+      if (editIncome) editIncome.addEventListener("click", (e) => { e.preventDefault(); this.openEditForm(p); });
 
       App.util.$$("[data-actual]", root).forEach((row) => {
         row.addEventListener("click", () => {
@@ -140,30 +152,40 @@
         </tbody></table>`;
     },
 
-    projectedVsActual(p) {
-      const proj = p.projected || {};
+    expectedVsActual(p) {
       const actuals = (p.actuals || []).slice().sort((a, b) => num(a.year) - num(b.year));
-      const hasProj = num(proj.rent) || num(proj.cashFlow) || num(proj.cashOnCash);
 
-      if (!hasProj && !actuals.length) {
+      if (!actuals.length) {
         return ui.emptyState(
-          "Track how reality compares to your underwriting. Enter the returns you projected at purchase, then add actual results each year from your P&L, tax return, Stessa, or QuickBooks."
+          "See how reality compares to expectations. Your expected returns are calculated from the inputs above; add a year's actual rent & expenses (from your P&L, tax return, Stessa, or QuickBooks) and we'll compute the actual cash flow, cash-on-cash, and ROE — and the variance."
         );
       }
 
-      const cmpRow = (label, projVal, fmt) => {
-        const cells = actuals
-          .map((a) => {
-            const v = a[label.key];
+      // Expected (pro-forma) column is calculated from the property inputs.
+      const m = App.finance.propertyMetrics(p);
+      const expected = {
+        rent: m.annualRent,
+        expenses: m.annualExpenses,
+        cashFlow: m.annualCashFlow,
+        cashOnCash: m.cashOnCash,
+        roe: m.roe,
+      };
+      // Compute each actual year's metrics with the same formulas.
+      const actualCalcs = actuals.map((a) => ({ a, calc: App.finance.actualMetrics(p, a) }));
+
+      const cmpRow = (label, expVal, key, fmt) => {
+        const cells = actualCalcs
+          .map(({ calc }) => {
+            const v = calc[key];
             let delta = "";
-            if (num(projVal) && (v || v === 0)) {
-              const d = ((num(v) - num(projVal)) / num(projVal)) * 100;
+            if (num(expVal) && (v || v === 0)) {
+              const d = ((num(v) - num(expVal)) / Math.abs(num(expVal))) * 100;
               delta = `<span class="delta ${signClass(d)}">${d >= 0 ? "+" : ""}${pct(d, 0)}</span>`;
             }
             return `<td class="num">${v || v === 0 ? fmt(v) : "—"} ${delta}</td>`;
           })
           .join("");
-        return `<tr><th>${esc(label.label)}</th><td class="num proj">${num(projVal) || projVal === 0 ? fmt(projVal) : "—"}</td>${cells}</tr>`;
+        return `<tr><th>${esc(label)}</th><td class="num proj">${num(expVal) || expVal === 0 ? fmt(expVal) : "—"}</td>${cells}</tr>`;
       };
 
       const yearHeaders = actuals
@@ -176,16 +198,17 @@
       return `
         <div class="table-wrap">
           <table class="data-table pva">
-            <thead><tr><th></th><th class="num">Projected</th>${yearHeaders}</tr></thead>
+            <thead><tr><th></th><th class="num">Expected <span class="src">calculated</span></th>${yearHeaders}</tr></thead>
             <tbody>
-              ${cmpRow({ label: "Annual Rent", key: "rent" }, proj.rent, (v) => money(v))}
-              ${cmpRow({ label: "Annual Expenses", key: "expenses" }, proj.expenses, (v) => money(v))}
-              ${cmpRow({ label: "Annual Cash Flow", key: "cashFlow" }, proj.cashFlow, (v) => money(v))}
-              ${cmpRow({ label: "Cash-on-Cash", key: "cashOnCash" }, proj.cashOnCash, (v) => pct(v))}
+              ${cmpRow("Annual Rent", expected.rent, "annualRent", (v) => money(v))}
+              ${cmpRow("Annual Expenses", expected.expenses, "annualExpenses", (v) => money(v))}
+              ${cmpRow("Annual Cash Flow", expected.cashFlow, "annualCashFlow", (v) => money(v))}
+              ${cmpRow("Cash-on-Cash", expected.cashOnCash, "cashOnCash", (v) => pct(v))}
+              ${cmpRow("Return on Equity", expected.roe, "roe", (v) => pct(v))}
             </tbody>
           </table>
         </div>
-        <p class="muted small">Click a year column header to edit it. Deltas compare actual to projected.</p>`;
+        <p class="muted small">"Expected" is calculated from your current inputs. Click a year to edit it. Deltas compare actual vs expected.</p>`;
     },
 
     /* ---- forms ----------------------------------------------------------*/
@@ -217,27 +240,6 @@
       });
     },
 
-    openProjectedForm(p) {
-      const proj = p.projected || {};
-      ui.openForm({
-        title: "Projected Returns (at purchase)",
-        submitLabel: "Save projections",
-        values: proj,
-        fields: [
-          { name: "rent", label: "Projected Annual Rent", type: "money" },
-          { name: "expenses", label: "Projected Annual Expenses", type: "money" },
-          { name: "cashFlow", label: "Projected Annual Cash Flow", type: "money" },
-          { name: "cashOnCash", label: "Projected Cash-on-Cash", type: "percent" },
-        ],
-        onSubmit: (v) => {
-          p.projected = v;
-          App.store.commit();
-          ui.toast("Projections saved.", "ok");
-          App.router.refresh();
-        },
-      });
-    },
-
     openActualForm(p, existing) {
       ui.openForm({
         title: existing ? `Actual Results · ${existing.year}` : "Add Actual Year",
@@ -252,10 +254,8 @@
             { value: "Annual P&L", label: "Annual P&L" },
             { value: "Other", label: "Other" },
           ] },
-          { name: "rent", label: "Actual Annual Rent", type: "money" },
-          { name: "expenses", label: "Actual Annual Expenses", type: "money" },
-          { name: "cashFlow", label: "Actual Annual Cash Flow", type: "money" },
-          { name: "cashOnCash", label: "Actual Cash-on-Cash", type: "percent" },
+          { name: "rent", label: "Actual Annual Rent", type: "money", hint: "Total rent actually collected that year" },
+          { name: "expenses", label: "Actual Annual Operating Expenses", type: "money", hint: "Excludes the mortgage — we add debt service automatically" },
         ],
         onSubmit: (v) => {
           App.store.addActual(p.id, v);
@@ -275,6 +275,7 @@
 
     openEditForm(p) {
       const loan = p.loan || {};
+      const termYears = App.util.num(loan.termMonths) > 0 ? +(App.util.num(loan.termMonths) / 12).toFixed(2) : "";
       ui.openForm({
         title: "Edit Property",
         submitLabel: "Save changes",
@@ -283,16 +284,15 @@
           type: p.type,
           purchaseDate: p.purchaseDate,
           purchasePrice: p.purchasePrice,
+          currentValue: p.currentValue,
           downPayment: p.downPayment,
           rehabCosts: p.rehabCosts,
           estimatedRent: p.estimatedRent,
           monthlyExpenses: p.monthlyExpenses,
-          expectedCashFlow: p.expectedCashFlow,
           originalBalance: loan.originalBalance,
           interestRate: loan.interestRate,
-          termMonths: loan.termMonths,
-          monthlyPayment: loan.monthlyPayment,
-          startDate: loan.startDate || p.purchaseDate,
+          termYears: termYears,
+          loanStartDate: loan.startDate || p.purchaseDate,
           currentBalanceOverride: loan.currentBalanceOverride,
         },
         fields: [
@@ -300,36 +300,41 @@
           { name: "type", label: "Property Type", type: "select", options: V.portfolio.PROPERTY_TYPES.map((t) => ({ value: t, label: t })) },
           { name: "purchaseDate", label: "Purchase Date", type: "date" },
           { name: "purchasePrice", label: "Purchase Price", type: "money" },
-          { name: "downPayment", label: "Down Payment", type: "money" },
-          { name: "rehabCosts", label: "Rehab Costs", type: "money" },
+          { name: "currentValue", label: "Current Est. Value", type: "money", hint: "Or use 'Update Value' to log it with a date" },
+
+          { name: "_incomeSep", label: "Income & expenses", type: "heading", hint: "Used to calculate cash flow (net profit)", wide: true },
           { name: "estimatedRent", label: "Monthly Rent", type: "money" },
-          { name: "monthlyExpenses", label: "Monthly Operating Expenses", type: "money" },
-          { name: "expectedCashFlow", label: "Expected Monthly Cash Flow", type: "money", hint: "Blank = auto-calc" },
-          { name: "originalBalance", label: "Original Loan Amount", type: "money" },
+          { name: "monthlyExpenses", label: "Monthly Operating Expenses", type: "money", hint: "Taxes, insurance, mgmt, maintenance — NOT the mortgage" },
+
+          { name: "_cashSep", label: "Cash invested", type: "heading", hint: "Used to calculate cash-on-cash return", wide: true },
+          { name: "downPayment", label: "Down Payment", type: "money" },
+          { name: "rehabCosts", label: "Rehab + Closing Costs", type: "money" },
+
+          { name: "_loanSep", label: "Loan", type: "heading", hint: "Drives the amortization schedule and mortgage payment", wide: true },
+          { name: "originalBalance", label: "Original Loan Amount", type: "money", hint: "Usually purchase price − down payment" },
           { name: "interestRate", label: "Interest Rate", type: "percent" },
-          { name: "termMonths", label: "Loan Term (months)", type: "number" },
-          { name: "monthlyPayment", label: "Monthly P&I Payment", type: "money", hint: "Blank = auto-calc" },
-          { name: "startDate", label: "Loan Start Date", type: "date" },
-          { name: "currentBalanceOverride", label: "Known Current Balance", type: "money", hint: "Optional — pins exact balance" },
+          { name: "termYears", label: "Loan Term (years)", type: "number", placeholder: "30" },
+          { name: "loanStartDate", label: "Loan Start Date", type: "date" },
+          { name: "currentBalanceOverride", label: "Pin Current Balance (optional)", type: "money", hint: "Advanced — only after a refinance or to override the calculated balance" },
         ],
         onSubmit: (v) => {
+          const termMonths = App.util.num(v.termYears) > 0 ? Math.round(App.util.num(v.termYears) * 12) : "";
           Object.assign(p, {
             name: v.name,
             type: v.type,
             purchaseDate: v.purchaseDate,
             purchasePrice: v.purchasePrice,
+            currentValue: v.currentValue || v.purchasePrice,
             downPayment: v.downPayment,
             rehabCosts: v.rehabCosts,
             estimatedRent: v.estimatedRent,
             monthlyExpenses: v.monthlyExpenses,
-            expectedCashFlow: v.expectedCashFlow,
           });
           p.loan = {
             originalBalance: v.originalBalance,
             interestRate: v.interestRate,
-            termMonths: v.termMonths,
-            monthlyPayment: v.monthlyPayment,
-            startDate: v.startDate || v.purchaseDate,
+            termMonths: termMonths,
+            startDate: v.loanStartDate || v.purchaseDate,
             currentBalanceOverride: v.currentBalanceOverride,
           };
           App.store.commit();

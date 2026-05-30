@@ -144,20 +144,18 @@
         }
       });
 
-      // outperformance vs projection (latest actual)
-      port.properties.forEach(({ property }) => {
-        const projCF = property.projected && num(property.projected.cashFlow);
-        const actuals = property.actuals || [];
-        if (projCF && actuals.length) {
+      // actual vs expected (latest logged year, expected = calculated pro-forma)
+      port.properties.forEach(({ property, metrics }) => {
+        const expectedCF = metrics.annualCashFlow;
+        const actuals = (property.actuals || []).slice().sort((a, b) => num(a.year) - num(b.year));
+        if (actuals.length && Math.abs(expectedCF) > 0) {
           const latest = actuals[actuals.length - 1];
-          const actCF = num(latest.cashFlow);
-          if (projCF > 0) {
-            const diff = ((actCF - projCF) / projCF) * 100;
-            if (diff >= 15) {
-              alerts.push({ tone: "ok", text: `${property.name} outperformed its projection by ${pct(diff, 0)} in ${latest.year}.` });
-            } else if (diff <= -15) {
-              alerts.push({ tone: "warn", text: `${property.name} underperformed its projection by ${pct(Math.abs(diff), 0)} in ${latest.year}.` });
-            }
+          const actCF = App.finance.actualMetrics(property, latest).annualCashFlow;
+          const diff = ((actCF - expectedCF) / Math.abs(expectedCF)) * 100;
+          if (diff >= 15) {
+            alerts.push({ tone: "ok", text: `${property.name} beat its expected cash flow by ${pct(diff, 0)} in ${latest.year}.` });
+          } else if (diff <= -15) {
+            alerts.push({ tone: "warn", text: `${property.name} came in ${pct(Math.abs(diff), 0)} under its expected cash flow in ${latest.year}.` });
           }
         }
       });
