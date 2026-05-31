@@ -76,6 +76,32 @@ That's it — deploy and your users can sign up and sync.
 > Users who used the app in local mode before signing up have their existing
 > local data automatically adopted into their new account on first login.
 
+### Admin read-only access (optional)
+
+You can let specific accounts view any member's dashboard, portfolio, and
+statement **read-only** — handy if you manage finances for family or clients.
+
+1. Run [`supabase-admin.sql`](supabase-admin.sql) in the Supabase SQL Editor
+   (after `supabase-setup.sql`). Edit the `admin_emails` insert near the top to
+   list your admin email(s).
+2. Sign in with an admin account — an **Admin** item appears in the sidebar. It
+   lists members; click **View account** to open theirs read-only. A banner
+   shows whose account you're in; **Exit view** returns to your own.
+
+How it's secured:
+
+- **Enforced in the database, not the browser.** An extra Row Level Security
+  policy grants admins `SELECT` on all rows; a normal user (even with the public
+  anon key) still only ever sees their own. Hiding the Admin menu is cosmetic —
+  the policy is the real gate.
+- **Read-only, both ways.** No admin write policy is added, so admins can't
+  change another user's data in Supabase. The app also blocks edits client-side
+  and never persists a viewed account, so it can't overwrite your own row.
+- Only works for **signed-in (cloud) members** — local-only users never upload
+  data, so there's nothing to view.
+
+Revoke admin anytime: `delete from public.admin_emails where email = '…';`
+
 ## 🚀 Use it
 
 **Option A — just open it.** Download/clone this repo and open `index.html` in
@@ -122,6 +148,7 @@ it anytime in **Settings → Erase all my data** and start entering your own.
 ```
 index.html            # app shell + nav
 supabase-setup.sql    # one-time DB + Row Level Security setup for cloud sync
+supabase-admin.sql    # optional: admin allowlist + read-only "view as" access
 css/styles.css        # styling
 js/
   config.js           # deployment config (Supabase URL/key, or blank = local)
@@ -133,8 +160,8 @@ js/
   ui.js               # reusable cards, modal forms, toasts
   auth.js             # Supabase email/password auth + login screen
   cloud.js            # cloud sync (pull on login, debounced push on change)
-  app.js              # hash router + auth/sync bootstrap
-  views/              # dashboard, statement, portfolio, property, trends, settings
+  app.js              # hash router + auth/sync bootstrap + admin view-as mode
+  views/              # dashboard, statement, portfolio, property, trends, settings, admin
 ```
 
 ## 🛠️ How the math works

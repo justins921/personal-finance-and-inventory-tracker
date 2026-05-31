@@ -109,6 +109,10 @@
   }
 
   function openForm(cfg) {
+    if (App.store && App.store.isViewingAs) {
+      toast("Read-only — you're viewing another member's account.", "warn");
+      return;
+    }
     closeModal();
     const fields = cfg.fields || [];
     const overlay = util.el(`

@@ -114,6 +114,45 @@
     async pushNow(data) {
       return cloud.flush(data);
     },
+
+    /* ---- admin (read-only) ---------------------------------------------*/
+
+    /** Ask the backend whether the signed-in user is an allowlisted admin. */
+    async amIAdmin() {
+      if (!client || !userId) return false;
+      try {
+        const { data, error } = await client.rpc("am_i_admin");
+        if (error) throw error;
+        return !!data;
+      } catch (e) {
+        // Missing function (admin SQL not applied) or no access → not an admin.
+        console.warn("Admin check unavailable:", e.message || e);
+        return false;
+      }
+    },
+
+    /** List all members (admin only; RLS returns just yourself otherwise). */
+    async listUsers() {
+      if (!client) return [];
+      const { data, error } = await client
+        .from("profiles")
+        .select("id,email,created_at")
+        .order("email", { ascending: true });
+      if (error) throw error;
+      return data || [];
+    },
+
+    /** Fetch another user's stored data object (admins only, via RLS). */
+    async pullUserData(id) {
+      if (!client || !id) return null;
+      const { data, error } = await client
+        .from(TABLE)
+        .select("data,updated_at")
+        .eq("user_id", id)
+        .maybeSingle();
+      if (error) throw error;
+      return data ? { data: data.data, updatedAt: data.updated_at } : null;
+    },
   };
 
   App.cloud = cloud;

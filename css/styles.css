@@ -194,6 +194,54 @@ h4 { font-size: 0.92rem; margin: 0; }
 }
 .icon-btn:hover { background: var(--surface-2); }
 .icon-btn--sm { font-size: 0.8rem; color: var(--muted); padding: 2px 6px; }
+.btn--sm { padding: 5px 11px; font-size: 0.82rem; }
+
+/* ---- admin directory ----------------------------------------------------*/
+.nav-link--admin .nav-ico { filter: saturate(0.6); }
+.admin-search {
+  width: 100%;
+  padding: 9px 12px;
+  margin-bottom: 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  color: var(--text);
+  font: inherit;
+}
+.admin-table td { vertical-align: middle; }
+
+/* ---- admin read-only "view as" mode ------------------------------------*/
+.ro-banner {
+  position: fixed;
+  left: 50%;
+  bottom: 18px;
+  transform: translateX(-50%);
+  z-index: 1200;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  max-width: calc(100vw - 24px);
+  padding: 9px 9px 9px 16px;
+  border-radius: 999px;
+  background: #1f2937;
+  color: #fff;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.35);
+  font-size: 0.86rem;
+}
+.ro-banner b { font-weight: 700; }
+.ro-banner__exit {
+  border: 0;
+  cursor: pointer;
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: #fff;
+  color: #1f2937;
+  font: inherit;
+  font-weight: 600;
+}
+.ro-banner__exit:hover { background: #e5e7eb; }
+/* Make read-only obvious: dim disabled action buttons inside the viewed page. */
+.readonly-view #view button[disabled] { opacity: 0.45; cursor: not-allowed; }
 
 /* ---- hero net worth -----------------------------------------------------*/
 .hero-net-worth {

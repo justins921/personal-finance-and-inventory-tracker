@@ -76,9 +76,25 @@
 
   const listeners = [];
   let remoteSaver = null; // optional cloud persister, registered by cloud.js
+  let viewAsBackup = null; // stashed owner state while an admin views another account
+
+  function notify() {
+    listeners.forEach((fn) => {
+      try {
+        fn(store.data);
+      } catch (e) {
+        console.error(e);
+      }
+    });
+  }
 
   const store = {
     data: emptyData(),
+
+    // True while an admin is viewing someone else's account. In this mode the
+    // store is strictly READ-ONLY: nothing is written to localStorage or the
+    // cloud, so the viewed data can never overwrite the admin's own row.
+    isViewingAs: false,
 
     /* ---- namespace / persistence ---------------------------------------*/
 
@@ -128,8 +144,33 @@
       return false;
     },
 
+    /* ---- admin read-only "view as" mode --------------------------------*/
+
+    /** Swap in another user's data for read-only viewing (admins only). */
+    enterViewAs(data) {
+      if (!store.isViewingAs) viewAsBackup = { data: store.data, namespace };
+      store.isViewingAs = true;
+      store.data = normalize(data);
+      notify();
+    },
+
+    /** Restore the admin's own data and leave read-only mode. */
+    exitViewAs() {
+      if (!store.isViewingAs) return;
+      store.isViewingAs = false;
+      if (viewAsBackup) {
+        namespace = viewAsBackup.namespace;
+        store.data = viewAsBackup.data; // owner's in-memory state, untouched
+        viewAsBackup = null;
+      } else {
+        store.load();
+      }
+      notify();
+    },
+
     /** Write the in-memory data to the local cache only. */
     save() {
+      if (store.isViewingAs) return; // never persist a viewed account
       try {
         localStorage.setItem(storageKey(), JSON.stringify(store.data));
       } catch (e) {
@@ -167,6 +208,11 @@
 
     /** Persist (local + remote) and notify listeners. Call after any mutation. */
     commit() {
+      if (store.isViewingAs) {
+        // Read-only: re-render but never write the viewed account anywhere.
+        notify();
+        return;
+      }
       store.save();
       if (remoteSaver) {
         try {
@@ -175,13 +221,7 @@
           console.error("Remote save failed:", e);
         }
       }
-      listeners.forEach((fn) => {
-        try {
-          fn(store.data);
-        } catch (e) {
-          console.error(e);
-        }
-      });
+      notify();
     },
 
     onChange(fn) {

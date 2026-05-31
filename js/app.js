@@ -15,6 +15,7 @@
     { pattern: /^\/property\/(.+)$/, view: "property", param: "id" },
     { pattern: /^\/trends$/, view: "trends" },
     { pattern: /^\/settings$/, view: "settings" },
+    { pattern: /^\/admin$/, view: "admin" },
   ];
 
   function parseHash() {
@@ -53,7 +54,17 @@
           <p><a href="#/dashboard">Go to dashboard</a></p></div>`;
       }
       this.syncNav(view);
-      // remember last view
+      // In admin read-only "view as" mode, neutralize every action control in
+      // the rendered view (the store also refuses to persist — this is just so
+      // the UI doesn't invite edits). The Admin directory is exempt so the
+      // admin can still switch between members.
+      if (App.store.isViewingAs && view !== "admin") {
+        util.$$("#view button").forEach((b) => {
+          b.disabled = true;
+          b.title = "Read-only while viewing another member";
+        });
+      }
+      // remember last view (skipped automatically: writes are no-ops in view mode)
       App.store.data.settings.lastView = view;
     },
 
@@ -149,6 +160,79 @@
   }
   App.updateAccountChrome = updateAccountChrome;
 
+  /* ---- admin: read-only "view as another member" -----------------------*/
+
+  App.isAdmin = false;
+  App.viewingUser = null;
+
+  function updateAdminNav() {
+    const link = util.$("#adminNavLink");
+    if (link) link.hidden = !App.isAdmin;
+  }
+
+  /** Re-check admin status for the signed-in user and reveal the Admin menu. */
+  async function refreshAdminStatus() {
+    App.isAdmin = false;
+    updateAdminNav();
+    if (!App.config.isConfigured() || !(App.auth.user && App.auth.user())) return;
+    try {
+      App.isAdmin = await App.cloud.amIAdmin();
+    } catch (e) {
+      App.isAdmin = false;
+    }
+    updateAdminNav();
+  }
+
+  function renderViewBanner(profile, updatedAt) {
+    removeViewBanner();
+    const who = esc(profile.email || profile.id);
+    const stamp = updatedAt ? ` · data as of ${esc(new Date(updatedAt).toLocaleString())}` : "";
+    const banner = util.el(`
+      <div class="ro-banner" id="roBanner" role="status">
+        <span class="ro-banner__txt">👁️ Viewing <b>${who}</b>'s account — read-only${stamp}</span>
+        <button class="ro-banner__exit" id="roExit">Exit view</button>
+      </div>`);
+    document.body.appendChild(banner);
+    util.$("#roExit", banner).addEventListener("click", () => App.exitUserView());
+  }
+  function removeViewBanner() {
+    const b = util.$("#roBanner");
+    if (b) b.remove();
+  }
+
+  const esc = util.esc;
+
+  /** Enter read-only view of another member's account. */
+  async function enterUserView(profile) {
+    if (!App.isAdmin) return;
+    let res = null;
+    try {
+      res = await App.cloud.pullUserData(profile.id);
+    } catch (e) {
+      App.ui.toast("Couldn't load that member's data.", "error");
+      return;
+    }
+    App.store.enterViewAs(res && res.data ? res.data : {});
+    App.viewingUser = profile;
+    document.body.classList.add("readonly-view");
+    renderViewBanner(profile, res && res.updatedAt);
+    if (location.hash !== "#/dashboard") location.hash = "#/dashboard";
+    else router.refresh();
+  }
+
+  /** Leave read-only mode and restore the admin's own account. */
+  function exitUserView() {
+    if (!App.store.isViewingAs) return;
+    App.store.exitViewAs();
+    App.viewingUser = null;
+    document.body.classList.remove("readonly-view");
+    removeViewBanner();
+    router.refresh();
+  }
+
+  App.enterUserView = enterUserView;
+  App.exitUserView = exitUserView;
+
   /* ---- auth + cloud orchestration --------------------------------------*/
 
   async function enterApp(user) {
@@ -180,6 +264,7 @@
 
     startApp();
     maybeWelcome();
+    refreshAdminStatus();
   }
 
   function showLogin() {
@@ -197,7 +282,11 @@
     if (user) {
       enterApp(user);
     } else {
-      // Signed out: drop to login gate, keep nothing in view.
+      // Signed out: leave any admin view, forget admin status, show login gate.
+      if (App.store.isViewingAs) exitUserView();
+      App.isAdmin = false;
+      App.viewingUser = null;
+      updateAdminNav();
       App.store.setNamespace("local");
       showLogin();
     }
